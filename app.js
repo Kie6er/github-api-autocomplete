@@ -1,22 +1,31 @@
 const searchInput = document.getElementById('searchInput');
 const autocompleteList = document.getElementById('autocomplete-list');
 const repositoriesList = document.getElementById('repositories-list');
-let debounceTimer;
 
-searchInput.addEventListener('input', function () {
-	const inputValue = searchInput.value.trim();
-	autocompleteList.innerHTML = '';
+const debounce = (fn, debounceTime) => {
+	let timeout;
+
+	return function () {
+		const fnCall = () => {
+			fn.apply(this, arguments);
+		};
+		clearTimeout(timeout);
+		timeout = setTimeout(fnCall, debounceTime);
+	};
+};
+
+searchInput.addEventListener('input', debounce(function (element) {
+	const inputValue = element.target.value.trim();
+	autocompleteList.textContent = '';
+
 	if (inputValue === '') {
 		autocompleteList.style.display = 'none';
 		return;
-	}
-
-	clearTimeout(debounceTimer);
-	debounceTimer = setTimeout(() => {
+	} else {
 		fetch(`https://api.github.com/search/repositories?q=${inputValue}`)
 			.then(response => response.json())
 			.then(data => {
-				autocompleteList.innerHTML = '';
+				autocompleteList.textContent = '';
 				autocompleteList.style.display = 'block';
 				data.items.slice(0, 5).forEach(repository => {
 					const listItem = document.createElement('div');
@@ -30,14 +39,14 @@ searchInput.addEventListener('input', function () {
 				});
 			})
 			.catch(error => console.error('Error fetching repositories:', error));
-	}, 400);
-});
+	}
+}, 500));
+
 
 function addRepository(fullName) {
 	fetch(`https://api.github.com/repos/${fullName}`)
 		.then(response => response.json())
 		.then(repository => {
-			console.log(repository)
 			const listItem = document.createElement('div');
 			listItem.classList.add('repositories-item');
 			listItem.insertAdjacentHTML('beforeend', `
@@ -53,7 +62,6 @@ function addRepository(fullName) {
 					</svg>
 				</button>
 		`);
-
 			repositoriesList.appendChild(listItem);
 		})
 		.catch(error => console.error('Error:', error));
